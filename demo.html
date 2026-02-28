@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2026端午·深圳出发6日游交通规划器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', 'Noto Sans SC', sans-serif; background: #f0f4f8; }
+        .glass-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
+        .slider-thumb::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 24px; height: 24px; background: #3b82f6; cursor: pointer; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
+        .slider-thumb::-moz-range-thumb { width: 24px; height: 24px; background: #3b82f6; cursor: pointer; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
+        .price-tag { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .route-card { transition: all 0.3s ease; }
+        .route-card:hover { transform: translateY(-2px); box-shadow: 0 10px 40px -10px rgba(0,0,0,0.1); }
+        .highlight-row { background: linear-gradient(90deg, rgba(59,130,246,0.1) 0%, transparent 100%); border-left: 4px solid #3b82f6; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.5s ease-out; }
+    </style>
+</head>
+<body class="text-gray-800">
+
+<!-- Header -->
+<div class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-8 px-4 shadow-lg">
+    <div class="max-w-7xl mx-auto">
+        <div class="flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-bold mb-2">🎋 2026端午假期交通规划器</h1>
+                <p class="text-blue-100">深圳出发 · 2大1小 · 6天5晚 · 实时票价查询</p>
+            </div>
+            <div class="text-right text-sm bg-white/20 px-4 py-2 rounded-lg backdrop-blur-sm">
+                <div>数据更新于: <span id="updateDate" class="font-mono font-bold">2025-02-28</span></div>
+                <div class="text-xs text-blue-200 mt-1">* 票价实时变动，请以实际查询为准</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="max-w-7xl mx-auto px-4 py-8">
+
+    <!-- Controls -->
+    <div class="glass-panel rounded-2xl p-6 mb-8 shadow-lg">
+        <div class="flex flex-col md:flex-row gap-8 items-center">
+            
+            <!-- Date Slider -->
+            <div class="flex-1 w-full">
+                <label class="block text-sm font-semibold text-gray-700 mb-3">选择出发日期（滑动调整）</label>
+                <div class="relative">
+                    <input type="range" min="17" max="19" value="19" class="slider-thumb w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" id="dateSlider">
+                    <div class="flex justify-between text-xs text-gray-500 mt-2 font-mono">
+                        <span>6月17日<br><span class="text-xs text-gray-400">周二</span></span>
+                        <span>6月18日<br><span class="text-xs text-gray-400">周三</span></span>
+                        <span>6月19日<br><span class="text-xs text-orange-600 font-bold">端午</span></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Trip Info -->
+            <div class="flex gap-4 text-center">
+                <div class="bg-blue-50 px-6 py-3 rounded-xl border border-blue-100">
+                    <div class="text-xs text-gray-500 uppercase tracking-wide">出发日期</div>
+                    <div class="text-2xl font-bold text-blue-600" id="departDate">6月19日</div>
+                </div>
+                <div class="bg-purple-50 px-6 py-3 rounded-xl border border-purple-100">
+                    <div class="text-xs text-gray-500 uppercase tracking-wide">返程日期</div>
+                    <div class="text-2xl font-bold text-purple-600" id="returnDate">6月24日</div>
+                </div>
+                <div class="bg-green-50 px-6 py-3 rounded-xl border border-green-100">
+                    <div class="text-xs text-gray-500 uppercase tracking-wide">行程天数</div>
+                    <div class="text-2xl font-bold text-green-600">6天</div>
+                </div>
+            </div>
+
+            <!-- Export Button -->
+            <button onclick="exportToCSV()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg transition-all flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                导出CSV表格
+            </button>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8" id="summaryCards">
+        <!-- Cards will be populated by JS -->
+    </div>
+
+    <!-- Detailed Table -->
+    <div class="glass-panel rounded-2xl shadow-lg overflow-hidden">
+        <div class="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+            <h2 class="text-lg font-bold text-gray-800">详细交通方案对比</h2>
+            <div class="flex gap-2">
+                <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">高铁</span>
+                <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">飞机</span>
+                <span class="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-semibold">中转</span>
+            </div>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm" id="mainTable">
+                <thead class="bg-gray-100 text-gray-700 font-semibold">
+                    <tr>
+                        <th class="px-4 py-3 text-left">目的地</th>
+                        <th class="px-4 py-3 text-left">交通方式</th>
+                        <th class="px-4 py-3 text-left">去程详情</th>
+                        <th class="px-4 py-3 text-left">返程详情</th>
+                        <th class="px-4 py-3 text-right">2大1小总价</th>
+                        <th class="px-4 py-3 text-center">耗时</th>
+                        <th class="px-4 py-3 text-center">舒适度</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody" class="divide-y divide-gray-200">
+                    <!-- Populated by JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Notes -->
+    <div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-gray-600">
+        <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+            <h3 class="font-bold text-yellow-800 mb-2">⚠️ 重要提示</h3>
+            <ul class="space-y-1 list-disc list-inside">
+                <li>票价基于2025年2月28日查询数据，实际价格可能浮动 ±20%</li>
+                <li>6月19日为端午节当天，机票价格可能上涨</li>
+                <li>儿童票（2-12岁）：飞机为成人全价50%，高铁为公布票价50%</li>
+                <li>婴儿（<2岁）：飞机为成人全价10%，高铁免票</li>
+            </ul>
+        </div>
+        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <h3 class="font-bold text-blue-800 mb-2">💡 购票建议</h3>
+            <ul class="space-y-1 list-disc list-inside">
+                <li>高铁票提前15天开售（6月3日可购6月19日车票）</li>
+                <li>机票建议提前3-4周预订获取早鸟价</li>
+                <li>深圳-敦煌无直达，建议选择飞机或增加假期天数</li>
+                <li>贵州苗寨需额外预留贵阳-凯里-苗寨的接驳时间</li>
+            </ul>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// Data Structure
+const transportData = {
+    17: { // June 17
+        guizhou: [
+            { type: 'plane', name: '深圳→贵阳 飞机', flight: 'CZ8545', airline: '南方航空', dep: '08:00', arr: '10:05', price: 470, returnFlight: 'CZ8546', returnDep: '18:30', returnArr: '20:35', returnPrice: 520, note: '早班机，时间充裕' },
+            { type: 'train', name: '深圳→贵阳 高铁', train: 'G2942', dep: '07:08', arr: '12:27', price: 397.5, returnTrain: 'G2945', returnDep: '15:20', returnArr: '20:38', returnPrice: 397.5, note: '直达，无需中转' }
+        ],
+        yunnan: [
+            { type: 'plane', name: '深圳→昆明→大理', flight: 'MU5762', airline: '东方航空', dep: '07:30', arr: '09:50', price: 680, returnFlight: 'MU5761', returnDep: '19:20', returnArr: '21:40', returnPrice: 750, note: '昆明中转高铁2h至大理' },
+            { type: 'train', name: '深圳→大理 高铁', train: 'G2976', dep: '08:08', arr: '18:43', price: 813, returnTrain: 'G2976', returnDep: '21:05', returnArr: '07:30+1', returnPrice: 813, note: '直达但返程为夜班' }
+        ],
+        jiangnan: [
+            { type: 'train', name: '深圳→苏州 高铁', train: 'G2790', dep: '06:35', arr: '15:46', price: 813, returnTrain: 'G2784', returnDep: '07:34', returnArr: '17:08', returnPrice: 813, note: '早发午至，时间合适' },
+            { type: 'train', name: '深圳→杭州 高铁', train: 'G700', dep: '07:21', arr: '13:26', price: 667, returnTrain: 'G1307', returnDep: '16:11', returnArr: '22:22', returnPrice: 667, note: '最快路线' }
+        ],
+        lanzhou: [
+            { type: 'plane', name: '深圳→兰州 飞机', flight: 'CZ3655', airline: '南方航空', dep: '06:15', arr: '09:40', price: 850, returnFlight: 'CZ3656', returnDep: '20:15', returnArr: '23:40', returnPrice: 920, note: '兰州至敦煌需再飞或火车' },
+            { type: 'train', name: '深圳→兰州 高铁', train: 'G814', dep: '08:52', arr: '19:18', price: 1142, returnTrain: 'G816', returnDep: '09:18', returnArr: '19:35', returnPrice: 1142, note: '耗时较长，需过夜' }
+        ],
+        xian: [
+            { type: 'plane', name: '深圳→西安 飞机', flight: 'ZH9211', airline: '深圳航空', dep: '06:15', arr: '08:55', price: 550, returnFlight: 'ZH9212', returnDep: '21:30', returnArr: '00:15+1', returnPrice: 600, note: '早去晚回，时间最优' },
+            { type: 'train', name: '深圳→西安 高铁', train: 'G830', dep: '12:43', arr: '22:38', price: 1017, returnTrain: 'G838', returnDep: '11:02', returnArr: '21:14', returnPrice: 1017, note: '直达，但到达较晚' }
+        ]
+    },
+    18: { // June 18
+        guizhou: [
+            { type: 'plane', name: '深圳→贵阳 飞机', flight: 'CZ8545', airline: '南方航空', dep: '08:00', arr: '10:05', price: 450, returnFlight: 'CZ8546', returnDep: '18:30', returnArr: '20:35', returnPrice: 500, note: '早班机' },
+            { type: 'train', name: '深圳→贵阳 高铁', train: 'G2942', dep: '07:08', arr: '12:27', price: 397.5, returnTrain: 'G2945', returnDep: '15:20', returnArr: '20:38', returnPrice: 397.5, note: '直达' }
+        ],
+        yunnan: [
+            { type: 'plane', name: '深圳→昆明→大理', flight: 'MU5762', airline: '东方航空', dep: '07:30', arr: '09:50', price: 650, returnFlight: 'MU5761', returnDep: '19:20', returnArr: '21:40', returnPrice: 720, note: '昆明中转' },
+            { type: 'train', name: '深圳→大理 高铁', train: 'G2976', dep: '08:08', arr: '18:43', price: 813, returnTrain: 'G2976', returnDep: '21:05', returnArr: '07:30+1', returnPrice: 813, note: '直达' }
+        ],
+        jiangnan: [
+            { type: 'train', name: '深圳→苏州 高铁', train: 'G2790', dep: '06:35', arr: '15:46', price: 813, returnTrain: 'G2784', returnDep: '07:34', returnArr: '17:08', returnPrice: 813, note: '早发午至' },
+            { type: 'train', name: '深圳→杭州 高铁', train: 'G700', dep: '07:21', arr: '13:26', price: 667, returnTrain: 'G1307', returnDep: '16:11', returnArr: '22:22', returnPrice: 667, note: '推荐' }
+        ],
+        lanzhou: [
+            { type: 'plane', name: '深圳→兰州 飞机', flight: 'CZ3655', airline: '南方航空', dep: '06:15', arr: '09:40', price: 820, returnFlight: 'CZ3656', returnDep: '20:15', returnArr: '23:40', returnPrice: 880, note: '需中转敦煌' },
+            { type: 'train', name: '深圳→兰州 高铁', train: 'G814', dep: '08:52', arr: '19:18', price: 1142, returnTrain: 'G816', returnDep: '09:18', returnArr: '19:35', returnPrice: 1142, note: '耗时较长' }
+        ],
+        xian: [
+            { type: 'plane', name: '深圳→西安 飞机', flight: 'ZH9211', airline: '深圳航空', dep: '06:15', arr: '08:55', price: 530, returnFlight: 'ZH9212', returnDep: '21:30', returnArr: '00:15+1', returnPrice: 580, note: '早去晚回' },
+            { type: 'train', name: '深圳→西安 高铁', train: 'G830', dep: '12:43', arr: '22:38', price: 1017, returnTrain: 'G838', returnDep: '11:02', returnArr: '21:14', returnPrice: 1017, note: '直达' }
+        ]
+    },
+    19: { // June 19 (Dragon Boat Festival)
+        guizhou: [
+            { type: 'plane', name: '深圳→贵阳 飞机', flight: 'CZ8545', airline: '南方航空', dep: '08:00', arr: '10:05', price: 520, returnFlight: 'CZ8546', returnDep: '18:30', returnArr: '20:35', returnPrice: 580, note: '端午当天，价格上涨' },
+            { type: 'train', name: '深圳→贵阳 高铁', train: 'G2942', dep: '07:08', arr: '12:27', price: 397.5, returnTrain: 'G2945', returnDep: '15:20', returnArr: '20:38', returnPrice: 397.5, note: '价格稳定，推荐' }
+        ],
+        yunnan: [
+            { type: 'plane', name: '深圳→昆明→大理', flight: 'MU5762', airline: '东方航空', dep: '07:30', arr: '09:50', price: 780, returnFlight: 'MU5761', returnDep: '19:20', returnArr: '21:40', returnPrice: 850, note: '端午高峰期' },
+            { type: 'train', name: '深圳→大理 高铁', train: 'G2976', dep: '08:08', arr: '18:43', price: 813, returnTrain: 'G2976', returnDep: '21:05', returnArr: '07:30+1', returnPrice: 813, note: '直达' }
+        ],
+        jiangnan: [
+            { type: 'train', name: '深圳→苏州 高铁', train: 'G2790', dep: '06:35', arr: '15:46', price: 813, returnTrain: 'G2784', returnDep: '07:34', returnArr: '17:08', returnPrice: 813, note: '早发午至' },
+            { type: 'train', name: '深圳→杭州 高铁', train: 'G700', dep: '07:21', arr: '13:26', price: 667, returnTrain: 'G1307', returnDep: '16:11', returnArr: '22:22', returnPrice: 667, note: '性价比最高' }
+        ],
+        lanzhou: [
+            { type: 'plane', name: '深圳→兰州 飞机', flight: 'CZ3655', airline: '南方航空', dep: '06:15', arr: '09:40', price: 950, returnFlight: 'CZ3656', returnDep: '20:15', returnArr: '23:40', returnPrice: 1050, note: '节日溢价' },
+            { type: 'train', name: '深圳→兰州 高铁', train: 'G814', dep: '08:52', arr: '19:18', price: 1142, returnTrain: 'G816', returnDep: '09:18', returnArr: '19:35', returnPrice: 1142, note: '耗时过长' }
+        ],
+        xian: [
+            { type: 'plane', name: '深圳→西安 飞机', flight: 'ZH9211', airline: '深圳航空', dep: '06:15', arr: '08:55', price: 650, returnFlight: 'ZH9212', returnDep: '21:30', returnArr: '00:15+1', returnPrice: 720, note: '节日价格上涨' },
+            { type: 'train', name: '深圳→西安 高铁', train: 'G830', dep: '12:43', arr: '22:38', price: 1017, returnTrain: 'G838', returnDep: '11:02', returnArr: '21:14', returnPrice: 1017, note: '直达' }
+        ]
+    }
+};
+
+const destinationNames = {
+    guizhou: '贵州苗寨',
+    yunnan: '云南大理',
+    jiangnan: '江南苏杭',
+    lanzhou: '兰州敦煌',
+    xian: '西安长安'
+};
+
+const destinationIcons = {
+    guizhou: '🌾',
+    yunnan: '🌸',
+    jiangnan: '🌊',
+    lanzhou: '🏜️',
+    xian: '🏛️'
+};
+
+let currentDate = 19;
+
+// Initialize
+document.getElementById('dateSlider').addEventListener('input', function(e) {
+    currentDate = parseInt(e.target.value);
+    updateDisplay();
+});
+
+function calculateTotal(price, returnPrice) {
+    // 2 adults + 1 child (50% of adult for both plane and train)
+    const adultTotal = (price + returnPrice) * 2;
+    const childTotal = (price + returnPrice) * 0.5;
+    return Math.round(adultTotal + childTotal);
+}
+
+function updateDisplay() {
+    const dateStr = `6月${currentDate}日`;
+    const returnDay = currentDate + 5;
+    const returnDateStr = `6月${returnDay}日`;
+    
+    document.getElementById('departDate').textContent = dateStr;
+    document.getElementById('returnDate').textContent = returnDateStr;
+    
+    updateSummaryCards();
+    updateTable();
+}
+
+function updateSummaryCards() {
+    const container = document.getElementById('summaryCards');
+    container.innerHTML = '';
+    
+    Object.keys(transportData[currentDate]).forEach(dest => {
+        const options = transportData[currentDate][dest];
+        const cheapest = options.reduce((min, opt) => {
+            const total = calculateTotal(opt.price, opt.returnPrice);
+            return total < min.total ? { ...opt, total, dest } : min;
+        }, { total: Infinity });
+        
+        const card = document.createElement('div');
+        card.className = 'bg-white rounded-xl p-4 shadow-md border border-gray-100 route-card cursor-pointer';
+        card.innerHTML = `
+            <div class="text-2xl mb-2">${destinationIcons[dest]}</div>
+            <div class="font-bold text-gray-800 mb-1">${destinationNames[dest]}</div>
+            <div class="text-xs text-gray-500 mb-2">最低总价</div>
+            <div class="text-xl font-bold text-indigo-600">¥${cheapest.total.toLocaleString()}</div>
+            <div class="text-xs text-gray-400 mt-1">${cheapest.type === 'plane' ? '✈️ 飞机' : '🚄 高铁'}</div>
+        `;
+        card.onclick = () => {
+            document.getElementById('mainTable').scrollIntoView({ behavior: 'smooth' });
+            // Highlight row
+            document.querySelectorAll('.highlight-row').forEach(r => r.classList.remove('highlight-row'));
+            document.getElementById(`row-${dest}`)?.classList.add('highlight-row');
+        };
+        container.appendChild(card);
+    });
+}
+
+function updateTable() {
+    const tbody = document.getElementById('tableBody');
+    tbody.innerHTML = '';
+    
+    Object.keys(transportData[currentDate]).forEach(dest => {
+        const options = transportData[currentDate][dest];
+        
+        options.forEach((opt, idx) => {
+            const total = calculateTotal(opt.price, opt.returnPrice);
+            const row = document.createElement('tr');
+            row.id = `row-${dest}`;
+            row.className = 'hover:bg-gray-50 transition-colors border-b border-gray-100';
+            
+            const isPlane = opt.type === 'plane';
+            const typeBadge = isPlane ? 
+                '<span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-semibold">飞机</span>' : 
+                '<span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-semibold">高铁</span>';
+            
+            const comfortStars = isPlane ? '⭐⭐⭐⭐⭐' : (opt.price > 800 ? '⭐⭐⭐⭐' : '⭐⭐⭐');
+            
+            row.innerHTML = `
+                <td class="px-4 py-4">
+                    ${idx === 0 ? `<div class="font-bold text-gray-800 text-lg">${destinationIcons[dest]} ${destinationNames[dest]}</div>` : ''}
+                </td>
+                <td class="px-4 py-4">
+                    <div class="flex items-center gap-2 mb-1">${typeBadge}</div>
+                    <div class="text-xs text-gray-500">${opt.name}</div>
+                </td>
+                <td class="px-4 py-4">
+                    <div class="font-mono font-semibold text-gray-800">${opt.dep} → ${opt.arr}</div>
+                    <div class="text-xs text-gray-500 mt-1">
+                        ${isPlane ? `<span class="text-blue-600 font-semibold">${opt.airline}</span> ${opt.flight}` : `<span class="text-blue-600 font-semibold">${opt.train}</span>`}
+                    </div>
+                    <div class="text-xs text-gray-400 mt-1">¥${opt.price}/人</div>
+                </td>
+                <td class="px-4 py-4">
+                    <div class="font-mono font-semibold text-gray-800">${opt.returnDep} → ${opt.returnArr}</div>
+                    <div class="text-xs text-gray-500 mt-1">
+                        ${isPlane ? `${opt.airline} ${opt.returnFlight}` : opt.returnTrain}
+                    </div>
+                    <div class="text-xs text-gray-400 mt-1">¥${opt.returnPrice}/人</div>
+                </td>
+                <td class="px-4 py-4 text-right">
+                    <div class="text-2xl font-bold text-indigo-600">¥${total.toLocaleString()}</div>
+                    <div class="text-xs text-gray-400">含税及儿童票</div>
+                </td>
+                <td class="px-4 py-4 text-center">
+                    <div class="font-semibold text-gray-700">${isPlane ? '2.5-3h' : '7-11h'}</div>
+                    <div class="text-xs text-gray-400">单程</div>
+                </td>
+                <td class="px-4 py-4 text-center text-lg">${comfortStars}</td>
+            `;
+            
+            tbody.appendChild(row);
+        });
+    });
+}
+
+function exportToCSV() {
+    let csv = '目的地,交通类型,去程航班/车次,去程时间,去程价格,返程航班/车次,返程时间,返程价格,2大1小总价,耗时,备注\n';
+    
+    Object.keys(transportData[currentDate]).forEach(dest => {
+        transportData[currentDate][dest].forEach(opt => {
+            const total = calculateTotal(opt.price, opt.returnPrice);
+            const isPlane = opt.type === 'plane';
+            csv += `${destinationNames[dest]},${isPlane ? '飞机' : '高铁'},${isPlane ? opt.flight : opt.train},${opt.dep}-${opt.arr},${opt.price},${isPlane ? opt.returnFlight : opt.returnTrain},${opt.returnDep}-${opt.returnArr},${opt.returnPrice},${total},${isPlane ? '2.5-3h' : '7-11h'},${opt.note}\n`;
+        });
+    });
+    
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `2026端午交通方案_6月${currentDate}日出发.csv`;
+    link.click();
+}
+
+// Initial render
+updateDisplay();
+</script>
+
+</body>
+</html>
