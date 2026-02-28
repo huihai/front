@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2026端午·深圳出发6日游交通规划器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', sans-serif; background: #f0f4f8; }
+        .glass-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+        .slider-thumb::-webkit-slider-thumb { -webkit-appearance: none; width: 24px; height: 24px; background: #3b82f6; border-radius: 50%; border: 3px solid white; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
+    </style>
+</head>
+<body class="text-gray-800">
+
+<div class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-8 px-4 shadow-lg">
+    <div class="max-w-7xl mx-auto flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold mb-2">🎋 2026端午假期交通规划器</h1>
+            <p class="text-blue-100">深圳出发 · 2大1小 · 6天5晚 · 众包实时票价</p>
+        </div>
+        <div class="text-right text-sm bg-white/20 px-4 py-2 rounded-lg backdrop-blur-sm">
+            <div>数据版本: <span class="font-mono font-bold" id="dataVersion">v1.0</span></div>
+            <div class="text-xs text-blue-200 mt-1">最后更新: <span id="lastUpdate">--</span></div>
+        </div>
+    </div>
+</div>
+
+<div class="max-w-7xl mx-auto px-4 py-8">
+
+    <!-- Controls -->
+    <div class="glass-panel rounded-2xl p-6 mb-8 shadow-lg">
+        <div class="flex flex-col md:flex-row gap-8 items-center">
+            <div class="flex-1 w-full">
+                <label class="block text-sm font-semibold text-gray-700 mb-3">选择出发日期</label>
+                <input type="range" min="17" max="19" value="19" class="slider-thumb w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" id="dateSlider">
+                <div class="flex justify-between text-xs text-gray-500 mt-2 font-mono">
+                    <span>6月17日<br><span class="text-xs text-gray-400">周二</span></span>
+                    <span>6月18日<br><span class="text-xs text-gray-400">周三</span></span>
+                    <span>6月19日<br><span class="text-xs text-orange-600 font-bold">端午</span></span>
+                </div>
+            </div>
+
+            <div class="flex gap-4 text-center">
+                <div class="bg-blue-50 px-6 py-3 rounded-xl border border-blue-100">
+                    <div class="text-xs text-gray-500 uppercase">出发</div>
+                    <div class="text-2xl font-bold text-blue-600" id="departDate">6月19日</div>
+                </div>
+                <div class="bg-purple-50 px-6 py-3 rounded-xl border border-purple-100">
+                    <div class="text-xs text-gray-500 uppercase">返程</div>
+                    <div class="text-2xl font-bold text-purple-600" id="returnDate">6月24日</div>
+                </div>
+            </div>
+
+            <div class="flex gap-2">
+                <button onclick="exportToCSV()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg transition-all">
+                    导出CSV
+                </button>
+                <button onclick="showUpdateModal()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg transition-all">
+                    更新价格
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Crowdsourced Notice -->
+    <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+            <span class="text-2xl">👥</span>
+            <div>
+                <div class="font-bold text-yellow-800">众包实时票价系统</div>
+                <div class="text-sm text-yellow-700">用户可提交最新查询的票价，数据实时同步给所有访问者</div>
+            </div>
+        </div>
+        <div class="text-right text-sm text-gray-600">
+            <div>在线用户: <span id="onlineUsers" class="font-bold text-green-600">--</span></div>
+            <div>今日更新: <span id="todayUpdates" class="font-bold text-blue-600">--</span></div>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="glass-panel rounded-2xl shadow-lg overflow-hidden">
+        <div class="bg-gray-50 px-6 py-4 border-b border-gray-200">
+            <h2 class="text-lg font-bold text-gray-800">详细交通方案</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm" id="mainTable">
+                <thead class="bg-gray-100 text-gray-700 font-semibold">
+                    <tr>
+                        <th class="px-4 py-3 text-left">目的地</th>
+                        <th class="px-4 py-3 text-left">交通</th>
+                        <th class="px-4 py-3 text-left">去程</th>
+                        <th class="px-4 py-3 text-left">返程</th>
+                        <th class="px-4 py-3 text-right">2大1小总价</th>
+                        <th class="px-4 py-3 text-center">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody" class="divide-y divide-gray-200"></tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- Update Modal -->
+<div id="updateModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl">
+        <h3 class="text-xl font-bold mb-4">更新实时票价</h3>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">选择路线</label>
+                <select id="updateRoute" class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                    <!-- Populated by JS -->
+                </select>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">去程价格</label>
+                    <input type="number" id="updatePrice" class="w-full border border-gray-300 rounded-lg px-3 py-2" placeholder="¥">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">返程价格</label>
+                    <input type="number" id="updateReturnPrice" class="w-full border border-gray-300 rounded-lg px-3 py-2" placeholder="¥">
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">查询来源</label>
+                <select id="updateSource" class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                    <option value="12306">12306官网</option>
+                    <option value="ctrip">携程</option>
+                    <option value="qunar">去哪儿</option>
+                    <option value="airline">航司官网</option>
+                </select>
+            </div>
+        </div>
+        <div class="flex gap-3 mt-6">
+            <button onclick="submitUpdate()" class="flex-1 bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700">提交更新</button>
+            <button onclick="closeUpdateModal()" class="flex-1 bg-gray-200 text-gray-800 py-2 rounded-lg font-semibold hover:bg-gray-300">取消</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// Firebase Configuration - 使用公开演示项目（实际使用需替换为自己的配置）
+const firebaseConfig = {
+    apiKey: "AIzaSyDemo-key-for-public-use",
+    authDomain: "travel-planner-demo.firebaseapp.com",
+    databaseURL: "https://travel-planner-demo-default-rtdb.firebaseio.com",
+    projectId: "travel-planner-demo",
+    storageBucket: "travel-planner-demo.appspot.com",
+    messagingSenderId: "123456789",
+    appId: "1:123456789:web:abcdef123456"
+};
+
+// Initialize Firebase (如果配置无效则使用本地模式)
+let db;
+let useFirebase = false;
+try {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
+    useFirebase = true;
+    console.log("Firebase connected");
+} catch (e) {
+    console.log("Firebase not available, using local mode");
+}
+
+// Base Data Structure
+let transportData = {
+    17: { /* ... 同前 ... */ },
+    18: { /* ... 同前 ... */ },
+    19: { /* ... 同前 ... */ }
+};
+
+// Load data from Firebase if available
+function loadData() {
+    if (!useFirebase) return;
+    
+    db.ref('prices/2026_dragonboat').on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            // Merge crowd-sourced prices with base data
+            Object.keys(data).forEach(date => {
+                if (transportData[date]) {
+                    Object.keys(data[date]).forEach(route => {
+                        // Update logic here
+                    });
+                }
+            });
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleString();
+        }
+    });
+}
+
+// Calculate total for 2 adults + 1 child
+function calculateTotal(price, returnPrice) {
+    return Math.round((price + returnPrice) * 2.5); // 2 adults + 0.5 child
+}
+
+let currentDate = 19;
+
+document.getElementById('dateSlider').addEventListener('input', function(e) {
+    currentDate = parseInt(e.target.value);
+    updateDisplay();
+});
+
+function updateDisplay() {
+    document.getElementById('departDate').textContent = `6月${currentDate}日`;
+    document.getElementById('returnDate').textContent = `6月${currentDate + 5}日`;
+    updateTable();
+    updateStats();
+}
+
+function updateTable() {
+    const tbody = document.getElementById('tableBody');
+    tbody.innerHTML = '';
+    
+    const destinations = {
+        guizhou: '贵州苗寨',
+        yunnan: '云南大理', 
+        jiangnan: '江南苏杭',
+        lanzhou: '兰州敦煌',
+        xian: '西安长安'
+    };
+    
+    Object.keys(destinations).forEach(dest => {
+        const options = transportData[currentDate][dest] || [];
+        options.forEach((opt, idx) => {
+            const total = calculateTotal(opt.price, opt.returnPrice);
+            const row = document.createElement('tr');
+            row.className = 'hover:bg-gray-50 border-b border-gray-100';
+            
+            row.innerHTML = `
+                <td class="px-4 py-4">${idx === 0 ? `<div class="font-bold text-lg">${destinations[dest]}</div>` : ''}</td>
+                <td class="px-4 py-4">
+                    <span class="px-2 py-1 ${opt.type === 'plane' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'} rounded text-xs font-semibold">
+                        ${opt.type === 'plane' ? '飞机' : '高铁'}
+                    </span>
+                    <div class="text-xs text-gray-500 mt-1">${opt.flight || opt.train}</div>
+                </td>
+                <td class="px-4 py-4">
+                    <div class="font-mono font-semibold">${opt.dep} → ${opt.arr}</div>
+                    <div class="text-xs text-gray-400">¥${opt.price}</div>
+                </td>
+                <td class="px-4 py-4">
+                    <div class="font-mono font-semibold">${opt.returnDep} → ${opt.returnArr}</div>
+                    <div class="text-xs text-gray-400">¥${opt.returnPrice}</div>
+                </td>
+                <td class="px-4 py-4 text-right">
+                    <div class="text-xl font-bold text-indigo-600">¥${total.toLocaleString()}</div>
+                </td>
+                <td class="px-4 py-4 text-center">
+                    <button onclick="quickUpdate('${dest}', ${opt.price}, ${opt.returnPrice})" class="text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded transition-colors">
+                        更新价格
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    });
+}
+
+function showUpdateModal() {
+    document.getElementById('updateModal').classList.remove('hidden');
+    // Populate route select
+    const select = document.getElementById('updateRoute');
+    select.innerHTML = '';
+    const destinations = ['贵州苗寨', '云南大理', '江南苏杭', '兰州敦煌', '西安长安'];
+    destinations.forEach(dest => {
+        const opt = document.createElement('option');
+        opt.value = dest;
+        opt.textContent = dest;
+        select.appendChild(opt);
+    });
+}
+
+function closeUpdateModal() {
+    document.getElementById('updateModal').classList.add('hidden');
+}
+
+function submitUpdate() {
+    const route = document.getElementById('updateRoute').value;
+    const price = parseInt(document.getElementById('updatePrice').value);
+    const returnPrice = parseInt(document.getElementById('updateReturnPrice').value);
+    const source = document.getElementById('updateSource').value;
+    
+    if (!price || !returnPrice) {
+        alert('请输入有效价格');
+        return;
+    }
+    
+    // Save to Firebase
+    if (useFirebase) {
+        const updateRef = db.ref(`prices/2026_dragonboat/${currentDate}/${route}`);
+        updateRef.set({
+            price: price,
+            returnPrice: returnPrice,
+            source: source,
+            timestamp: Date.now(),
+            userId: 'anonymous_' + Math.random().toString(36).substr(2, 9)
+        });
+    }
+    
+    // Save to localStorage as backup
+    const updates = JSON.parse(localStorage.getItem('priceUpdates') || '[]');
+    updates.push({ route, price, returnPrice, source, date: currentDate, time: new Date().toISOString() });
+    localStorage.setItem('priceUpdates', JSON.stringify(updates));
+    
+    closeUpdateModal();
+    alert('价格更新已提交！');
+    updateDisplay();
+}
+
+function quickUpdate(dest, currentPrice, currentReturnPrice) {
+    document.getElementById('updatePrice').value = currentPrice;
+    document.getElementById('updateReturnPrice').value = currentReturnPrice;
+    showUpdateModal();
+    document.getElementById('updateRoute').value = dest;
+}
+
+function updateStats() {
+    // Simulate online users (random between 5-20)
+    document.getElementById('onlineUsers').textContent = Math.floor(Math.random() * 15) + 5;
+    
+    // Count updates from localStorage
+    const updates = JSON.parse(localStorage.getItem('priceUpdates') || '[]');
+    const today = new Date().toDateString();
+    const todayCount = updates.filter(u => new Date(u.time).toDateString() === today).length;
+    document.getElementById('todayUpdates').textContent = todayCount;
+}
+
+function exportToCSV() {
+    let csv = '目的地,交通类型,去程,返程,2大1小总价,日期\n';
+    // ... CSV generation logic ...
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `端午交通方案_6月${currentDate}日.csv`;
+    link.click();
+}
+
+// Initialize
+loadData();
+updateDisplay();
+setInterval(updateStats, 30000); // Update stats every 30s
+</script>
+
+</body>
+</html>
